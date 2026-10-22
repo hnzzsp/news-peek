@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>今日速览 · DailyPeek</title>
+<style>
+:root[data-theme="dark"]{
+  --bg:#0e1014; --surface:#161a22; --surface-2:#1c212c; --border:#262c38;
+  --text:#e8ebf0; --text-2:#9aa3b2; --text-3:#5c6575;
+  --accent:#e5484d; --accent-soft:rgba(229,72,77,.14);
+  --gold:#f5a623; --silver:#aab4c4; --bronze:#c98b5a;
+  --ok:#3fb96b; --warn:#e8a33d; --err:#e5484d;
+  --shadow:0 8px 28px rgba(0,0,0,.35);
+}
+:root[data-theme="light"]{
+  --bg:#f4f5f7; --surface:#ffffff; --surface-2:#f0f2f5; --border:#e3e6eb;
+  --text:#1a1d24; --text-2:#5f6774; --text-3:#9aa1ad;
+  --accent:#d6303a; --accent-soft:rgba(214,48,58,.09);
+  --gold:#d98e06; --silver:#8b94a3; --bronze:#b3703c;
+  --ok:#1e9e50; --warn:#c77f0a; --err:#d6303a;
+  --shadow:0 8px 24px rgba(20,24,33,.08);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  background:var(--bg); color:var(--text);
+  font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",-apple-system,"Segoe UI",sans-serif;
+  font-size:15px; line-height:1.65; min-height:100vh;
+  transition:background .25s,color .25s;
+}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+::selection{background:var(--accent-soft)}
+
+.wrap{max-width:1060px;margin:0 auto;padding:0 20px 64px}
+
+/* ===== 顶栏 ===== */
+.topbar{
+  position:sticky;top:0;z-index:50;
+  background:color-mix(in srgb,var(--bg) 86%,transparent);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--border);
+}
+.topbar-in{max-width:1060px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.brand{display:flex;align-items:baseline;gap:8px;font-weight:700;font-size:19px;letter-spacing:.5px}
+.brand .dot{width:9px;height:9px;border-radius:50%;background:var(--accent);display:inline-block;margin-right:2px;transform:translateY(-1px)}
+.brand-sub{font-size:11px;font-weight:600;color:var(--text-3);letter-spacing:1.5px;text-transform:uppercase}
+.date-chip{
+  font-size:13px;color:var(--text-2);background:var(--surface);
+  border:1px solid var(--border);border-radius:99px;padding:3px 12px;
+  font-variant-numeric:tabular-nums;white-space:nowrap;
+}
+.spacer{flex:1}
+.src-status{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text-2);white-space:nowrap}
+.src-status .led{width:8px;height:8px;border-radius:50%;background:var(--text-3);flex:none;transition:background .3s}
+.src-status.ok .led{background:var(--ok);box-shadow:0 0 8px color-mix(in srgb,var(--ok) 60%,transparent)}
+.src-status.warn .led{background:var(--warn)}
+.src-status.err .led{background:var(--err)}
+.icon-btn{
+  width:34px;height:34px;border-radius:10px;display:grid;place-items:center;
+  border:1px solid var(--border);background:var(--surface);color:var(--text-2);
+  transition:color .2s,border-color .2s,transform .15s;flex:none;
+}
+.icon-btn:hover{color:var(--text);border-color:var(--text-3)}
+.icon-btn:active{transform:scale(.92)}
+.icon-btn svg{width:17px;height:17px}
+.icon-btn.spin svg{animation:rot .8s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+
+/* ===== 微语卡 ===== */
+.quote-card{
+  margin:22px 0 20px;padding:22px 26px;border-radius:16px;
+  background:linear-gradient(135deg,var(--surface),var(--surface-2));
+  border:1px solid var(--border);position:relative;overflow:hidden;
+}
+.quote-card::before{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent);
+}
+.quote-label{font-size:12px;color:var(--text-3);letter-spacing:2px;margin-bottom:6px}
+.quote-text{font-size:18px;font-weight:600;line-height:1.5}
+.quote-meta{margin-top:10px;font-size:12.5px;color:var(--text-2);display:flex;gap:14px;flex-wrap:wrap;font-variant-numeric:tabular-nums}
+.quote-meta b{color:var(--accent);font-weight:600}
+
+/* ===== Tab 导航 ===== */
+.tabs{
+  display:flex;gap:6px;overflow-x:auto;padding:4px 2px 10px;
+  scrollbar-width:none;position:sticky;top:59px;z-index:40;
+  background:color-mix(in srgb,var(--bg) 88%,transparent);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+}
+.tabs::-webkit-scrollbar{display:none}
+.tab{
+  display:flex;align-items:center;gap:7px;padding:7px 14px;border-radius:10px;
+  font-size:13.5px;color:var(--text-2);border:1px solid transparent;white-space:nowrap;
+  transition:all .18s;flex:none;
+}
+.tab svg{width:15px;height:15px;flex:none}
+.tab:hover{color:var(--text);background:var(--surface)}
+.tab.active{color:var(--text);background:var(--accent-soft);border-color:color-mix(in srgb,var(--accent) 45%,transparent);font-weight:600}
+.tab .kbd{font-size:10px;color:var(--text-3);border:1px solid var(--border);border-radius:4px;padding:0 4px;line-height:15px}
+
+/* ===== 视图区 ===== */
+.view-head{display:flex;align-items:baseline;gap:12px;margin:6px 2px 14px;flex-wrap:wrap}
+.view-title{font-size:21px;font-weight:700}
+.view-sub{font-size:12.5px;color:var(--text-3);font-variant-numeric:tabular-nums}
+.cache-note{
+  display:none;margin:0 2px 14px;padding:9px 14px;border-radius:10px;font-size:13px;
+  background:color-mix(in srgb,var(--warn) 12%,transparent);
+  border:1px solid color-mix(in srgb,var(--warn) 35%,transparent);color:var(--text-2);
+}
+.cache-note.show{display:block}
+
+/* ===== 简报视图（左图右列表） ===== */
+.digest-grid{display:grid;grid-template-columns:340px 1fr;gap:18px;align-items:start}
+.digest-img{
+  border-radius:14px;overflow:hidden;border:1px solid var(--border);background:var(--surface);
+  position:sticky;top:118px;display:block;
+}
+.digest-img img{width:100%;display:block;transition:transform .4s}
+.digest-img:hover img{transform:scale(1.025)}
+.digest-img .img-cap{font-size:12px;color:var(--text-3);text-align:center;padding:8px}
+.digest-img.hide{display:none}
+
+/* ===== 新闻列表 ===== */
+.news-list{display:flex;flex-direction:column;gap:8px}
+.news-item{
+  display:flex;gap:13px;align-items:flex-start;padding:12px 15px;border-radius:12px;
+  background:var(--surface);border:1px solid var(--border);
+  transition:border-color .18s,transform .18s,background .18s;
+}
+.news-item:hover{border-color:color-mix(in srgb,var(--accent) 50%,var(--border));transform:translateX(3px)}
+.rank{
+  flex:none;width:26px;height:26px;border-radius:8px;display:grid;place-items:center;
+  font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;
+  background:var(--surface-2);color:var(--text-2);border:1px solid var(--border);margin-top:1px;
+}
+.news-item.top1 .rank{background:linear-gradient(135deg,#ffd66e,var(--gold));color:#3a2a00;border-color:transparent}
+.news-item.top2 .rank{background:linear-gradient(135deg,#dfe5ee,var(--silver));color:#2b3240;border-color:transparent}
+.news-item.top3 .rank{background:linear-gradient(135deg,#f0b98a,var(--bronze));color:#3d2405;border-color:transparent}
+.news-body{flex:1;min-width:0}
+.news-title{font-size:14.5px;line-height:1.55;display:block}
+.news-title .ext{color:var(--text-3);font-size:11px;margin-left:5px;opacity:0;transition:opacity .15s}
+.news-item:hover .news-title .ext{opacity:1}
+.news-meta{margin-top:4px;font-size:12px;color:var(--text-3);display:flex;gap:12px;flex-wrap:wrap;font-variant-numeric:tabular-nums}
+.news-meta .hot{color:var(--accent)}
+
+/* ===== AI 快讯卡片 ===== */
+.card-list{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.ai-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  padding:18px 20px;display:flex;flex-direction:column;gap:9px;
+  transition:border-color .18s,transform .18s;
+}
+.ai-card:hover{border-color:color-mix(in srgb,var(--accent) 50%,var(--border));transform:translateY(-2px)}
+.ai-card h3{font-size:15.5px;line-height:1.5}
+.ai-card p{font-size:13px;color:var(--text-2);line-height:1.7;
+  display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.ai-foot{margin-top:auto;display:flex;align-items:center;gap:10px;font-size:12px;color:var(--text-3)}
+.ai-foot .src{background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:1px 8px;color:var(--text-2)}
+.ai-foot .go{margin-left:auto;color:var(--accent);font-weight:600}
+
+/* ===== 骨架屏 / 状态 ===== */
+.skeleton{display:flex;flex-direction:column;gap:8px}
+.sk-row{height:56px;border-radius:12px;background:var(--surface);border:1px solid var(--border);
+  position:relative;overflow:hidden}
+.sk-row::after{content:"";position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--text) 6%,transparent),transparent);
+  animation:shim 1.3s infinite}
+@keyframes shim{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+.empty{padding:56px 20px;text-align:center;color:var(--text-3)}
+.empty .big{font-size:40px;margin-bottom:10px}
+.empty p{font-size:14px}
+
+footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--border);
+  font-size:12px;color:var(--text-3);line-height:1.8}
+footer code{background:var(--surface-2);border:1px solid var(--border);border-radius:5px;padding:0 6px;font-size:11px}
+
+@media (max-width:860px){
+  .digest-grid{grid-template-columns:1fr}
+  .digest-img{position:static;max-width:420px;margin:0 auto}
+  .card-list{grid-template-columns:1fr}
+  .quote-text{font-size:16px}
+  .tabs{top:57px}
+  .brand-sub{display:none}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-in">
+    <div class="brand"><span class="dot"></span>今日速览<span class="brand-sub">DailyPeek</span></div>
+    <div class="date-chip" id="dateChip">加载中…</div>
+    <div class="spacer"></div>
+    <div class="src-status" id="srcStatus"><span class="led"></span><span id="srcText">就绪</span></div>
+    <button class="icon-btn" id="themeBtn" title="切换深浅主题">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+    <button class="icon-btn" id="refreshBtn" title="刷新当前栏目（R）">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>
+    </button>
+  </div>
+</header>
+
+<div class="wrap">
+  <section class="quote-card">
+    <div class="quote-label">每 日 微 语</div>
+    <div class="quote-text" id="quoteText">慢慢来，比较快。</div>
+    <div class="quote-meta" id="quoteMeta"></div>
+  </section>
+
+  <nav class="tabs" id="tabs"></nav>
+
+  <div class="view-head">
+    <div class="view-title" id="viewTitle"></div>
+    <div class="view-sub" id="viewSub"></div>
+  </div>
+  <div class="cache-note" id="cacheNote"></div>
+
+  <main id="content"></main>
+
+  <footer>
+    数据来源：60s API（vikiboss/60s · MIT，多实例容灾）与自建 design-feed 管道（GitHub Actions 每小时抓取 Dribbble 热门与优设文章），页面为纯静态前端，所有请求由你的浏览器直接发出。<br>
+    快捷键：<code>1</code>–<code>9</code>/<code>0</code> 切换栏目 · <code>R</code> 刷新 · 数据异常时自动回退本地缓存与 GitHub 镜像。
+  </footer>
+</div>
+
+<script>
+"use strict";
+/* ================= 工具 ================= */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pad=n=>String(n).padStart(2,"0");
+const todayStr=()=>{const d=new Date();return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())};
+
+function fetchJSON(url,ms=9000){
+  const ctl=new AbortController();
+  const t=setTimeout(()=>ctl.abort(),ms);
+  return fetch(url,{signal:ctl.signal,redirect:"follow"})
+    .then(r=>{if(!r.ok)throw new Error("HTTP "+r.status);return r.json()});
+}
+async function tryChain(fetchers){
+  let lastErr=null;
+  for(const f of fetchers){
+    try{ return await f(); }catch(e){ lastErr=e; }
+  }
+  throw lastErr||new Error("all sources failed");
+}
+
+/* ================= 缓存 ================= */
+const CACHE_PREFIX="dailypeek:";
+function cacheSave(key,data){try{localStorage.setItem(CACHE_PREFIX+key,JSON.stringify({ts:Date.now(),data}))}catch(e){}}
+function cacheLoad(key){
+  try{const raw=localStorage.getItem(CACHE_PREFIX+key);if(!raw)return null;return JSON.parse(raw)}catch(e){return null}
+}
+const TTL={"digest":30*60e3,"ai":30*60e3,"history":24*3600e3,"dribbble":30*60e3,"uisdc":30*60e3};
+
+/* ================= 数据源定义 ================= */
+/* 60s API 多实例容灾链（主域名墙加重，实例列表来自官方文档 docs.60s-api.viki.moe） */
+const S60_BASES=[
+  "https://60s.crystelf.top/v2",
+  "https://api.cczo.cc/60s/v2",
+  "https://60s.viki.moe/v2",
+  "https://60s.zeabur.app/v2",
+  "https://60api.09cdn.xyz/v2",
+  "https://60s.7se.cn/v2"
+];
+const RAW60="https://raw.githubusercontent.com/vikiboss/60s-static-host/main/static/60s";
+/* 自建设计源管道：GitHub Actions 每小时抓取 → 仓库 JSON → raw 直读 */
+const FEED_RAW="https://raw.githubusercontent.com/hnzzsp/design-feed/main/data";
+
+function digestFetchers(){
+  return S60_BASES.map(b=>()=>fetchJSON(b+"/60s").then(j=>{if(j.code!==200||!j.data)throw new Error("bad resp");return j.data}))
+    .concat([
+      ()=>fetchJSON(RAW60+"/"+todayStr()+".json").then(j=>{if(!j.news)throw new Error("bad raw");return j}),
+      ()=>fetchJSON(RAW60+"/"+prevDateStr()+".json").then(j=>{if(!j.news)throw new Error("bad raw");return j})
+    ]);
+}
+function aiFetchers(){
+  return S60_BASES.map(b=>()=>fetchJSON(b+"/ai-news").then(j=>{if(j.code!==200||!j.data)throw new Error("bad resp");return j.data}));
+}
+function historyFetchers(){
+  return S60_BASES.map(b=>()=>fetchJSON(b+"/today_in_history").then(j=>{if(j.code!==200||!j.data)throw new Error("bad resp");return j.data}));
+}
+/* 60s 域热榜（逐实例容灾，国内可达优先） */
+function hot60Fetchers(path){
+  return S60_BASES.map(b=>()=>fetchJSON(b+path).then(j=>{
+    if(j.code!==200||!Array.isArray(j.data)||!j.data.length)throw new Error("empty");
+    return{title:"",subtitle:"",updateTime:j.api_updated_at||Date.now(),items:j.data};
+  }));
+}
+/* 自建 design-feed 管道（raw.githubusercontent 国内实测可达） */
+function feedFetchers(name){
+  return [()=>fetchJSON(FEED_RAW+"/"+name+".json?t="+Date.now()).then(j=>{
+    if(!Array.isArray(j.items)||!j.items.length)throw new Error("empty");
+    return{title:"",subtitle:"",updateTime:j.updated_at,items:j.items};
+  })];
+}
+/* DailyHotApi 公共实例（Vercel，国内可能被墙，作 fallback） */
+function prevDateStr(){const d=new Date(Date.now()-864e5);return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())}
+
+/* 通用条目归一化：兼容 DailyHotApi 新旧结构 */
+function normItem(it){
+  const title=it.title||it.name||it.desc||"";
+  let url=it.url||it.mobileUrl||it.link||"";
+  let hot=it.hot;
+  if(hot==null)hot=it.hot_value;
+  if(hot==null&&it.data&&typeof it.data==="object")hot=it.data.hot;
+  if(typeof hot!=="number"&&it.extra&&typeof it.extra==="object")hot=it.extra.hot;
+  let author=it.author||(it.owner&&it.owner.name)||it.source||"";
+  let desc=it.desc||"";
+  return{title,url,hot:(typeof hot==="number"?hot:null),author,desc};
+}
+
+/* ================= 栏目定义 ================= */
+const ICONS={
+  news:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4h13a1 1 0 0 1 1 1v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a1 1 0 0 1 1-1z"/><path d="M18 8h2a1 1 0 0 1 1 1v9a2 2 0 0 1-2 2"/><path d="M7 8h7M7 12h7M7 16h4"/></svg>',
+  bot:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="8" width="14" height="11" rx="3"/><path d="M12 4v4M9 13h.01M15 13h.01M9.5 16.5h5"/></svg>',
+  idea:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 1 3.5 10.8V16h-7v-2.2A6 6 0 0 1 12 3z"/></svg>',
+  fire:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3c1 3-2 4.5-2 7a2 2 0 0 0 4 0c0-1-.4-2-.4-2 2 1.2 3.4 3.2 3.4 5.5a5.5 5.5 0 0 1-11 0C6 9 9 6.5 12 3z"/></svg>',
+  tv:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M8 3l4 3 4-3M9 12h6M9 15.5h3"/></svg>',
+  search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg>',
+  mobile:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="7" y="3" width="10" height="18" rx="2.5"/><path d="M11 18h2"/></svg>',
+  briefcase:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M9 8V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18"/></svg>',
+  pick:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14.5 4.5 19.5 9.5 9 20H4v-5L14.5 4.5z"/><path d="M12.5 6.5 17.5 11.5"/></svg>',
+  ball:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M5.5 6.5c4.5 3 7.5 7 9 13M8 3.5c3.5 3.5 8 5 13 4.5M3.2 13c5.5-1.5 11-.5 15.5 3.5"/></svg>',
+  pen:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 19l7-7-3-3-7 7-1.5 4.5L12 19z"/><path d="M18 13l-3-3"/><path d="M4 21h9"/></svg>',
+  cal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>'
+};
+
+const TABS=[
+  {id:"digest",label:"每日简报",icon:"news",kind:"digest",fetchers:digestFetchers},
+  {id:"ai",label:"AI 快讯",icon:"bot",kind:"cards",fetchers:aiFetchers},
+  {id:"zhihu",label:"知乎热榜",icon:"idea",kind:"list",fetchers:()=>hot60Fetchers("/zhihu")},
+  {id:"weibo",label:"微博热搜",icon:"fire",kind:"list",fetchers:()=>hot60Fetchers("/weibo")},
+  {id:"bilibili",label:"B站热门",icon:"tv",kind:"list",fetchers:()=>hot60Fetchers("/bili")},
+  {id:"baidu",label:"百度热搜",icon:"search",kind:"list",fetchers:()=>hot60Fetchers("/baidu/realtime")},
+  {id:"toutiao",label:"今日头条",icon:"mobile",kind:"list",fetchers:()=>hot60Fetchers("/toutiao")},
+  {id:"dribbble",label:"Dribbble 热门",icon:"ball",kind:"list",fetchers:()=>feedFetchers("dribbble")},
+  {id:"uisdc",label:"优设设计",icon:"pen",kind:"list",fetchers:()=>feedFetchers("uisdc")},
+  {id:"history",label:"历史上的今天",icon:"cal",kind:"list",fetchers:historyFetchers}
+];
+
+/* ================= 状态 ================= */
+let curTab=TABS[0].id;
+const state={};   // tabId -> {data, from:"live"|"cache", source:string, ts:number}
+let loading=false;
+let pendingTab=null;
+
+/* ================= 渲染：框架 ================= */
+function renderTabs(){
+  $("#tabs").innerHTML=TABS.map((t,i)=>{
+    const key=i<9?String(i+1):"0";
+    return `<button class="tab${t.id===curTab?" active":""}" data-tab="${t.id}">
+      ${ICONS[t.icon]||""}<span>${esc(t.label)}</span><span class="kbd">${key}</span></button>`;
+  }).join("");
+  $("#tabs").querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>switchTab(b.dataset.tab)));
+}
+
+function setStatus(kind,text){
+  const el=$("#srcStatus");
+  el.className="src-status "+kind;
+  $("#srcText").textContent=text;
+}
+
+function switchTab(id){
+  if(!TABS.some(t=>t.id===id))return;
+  curTab=id;
+  renderTabs();
+  const tab=TABS.find(t=>t.id===id);
+  $("#viewTitle").textContent=tab.label;
+  $("#viewSub").textContent="";
+  loadTab(id);
+}
+
+/* ================= 渲染：各视图 ================= */
+function skeleton(n=8){
+  return `<div class="skeleton">${Array.from({length:n},()=>'<div class="sk-row"></div>').join("")}</div>`;
+}
+
+function fmtHot(n){
+  if(n==null)return"";
+  if(n>=1e8)return (n/1e8).toFixed(1).replace(/\.0$/,"")+" 亿";
+  if(n>=1e4)return (n/1e4).toFixed(1).replace(/\.0$/,"")+" 万";
+  return String(n);
+}
+function fmtTime(ts){
+  const d=new Date(ts);
+  return pad(d.getHours())+":"+pad(d.getMinutes());
+}
+function relTime(ts){
+  const s=Math.max(0,Math.floor((Date.now()-ts)/1000));
+  if(s<60)return s+" 秒前";
+  if(s<3600)return Math.floor(s/60)+" 分钟前";
+  if(s<86400)return Math.floor(s/3600)+" 小时前";
+  return Math.floor(s/86400)+" 天前";
+}
+
+/* ---- 每日简报 ---- */
+function renderDigest(d,meta){
+  const img=d.image?`<div class="digest-img" id="digestImg">
+      <a href="${esc(d.link||"#")}" target="_blank" rel="noopener">
+        <img src="${esc(d.image)}" alt="每日简报图" loading="lazy"
+          onerror="document.getElementById('digestImg').classList.add('hide')">
+      </a>
+      <div class="img-cap">点击图片查看公众号原文</div>
+    </div>`:"";
+  const news=Array.isArray(d.news)?d.news:[];
+  const items=news.map((n,i)=>{
+    const text=typeof n==="string"?n:(n.title||"");
+    const url=typeof n==="string"?(d.link||""):(n.link||d.link||"");
+    const src=typeof n==="object"&&n.source?n.source:"";
+    return `<a class="news-item" href="${esc(url)}" target="_blank" rel="noopener">
+      <span class="rank">${i+1}</span>
+      <span class="news-body">
+        <span class="news-title">${esc(text)}<span class="ext">↗</span></span>
+        <span class="news-meta">${src?`<span>${esc(src)}</span>`:""}<span>${esc(d.date||"")}</span></span>
+      </span></a>`;
+  }).join("");
+  $("#content").innerHTML=`<div class="digest-grid">${img}<div class="news-list">${items}</div></div>`;
+  if(d.tip)$("#quoteText").textContent=d.tip;
+  if(d.date){
+    $("#quoteMeta").innerHTML=`<span>日期 <b>${esc(d.date)}</b></span>`+
+      (d.day_of_week?`<span>${esc(d.day_of_week)}</span>`:"")+
+      (d.lunar_date?`<span>农历 ${esc(d.lunar_date)}</span>`:"")+
+      (d.link?`<span><a href="${esc(d.link)}" target="_blank" rel="noopener" style="color:var(--accent)">公众号原文 ↗</a></span>`:"");
+  }
+}
+
+/* ---- AI 快讯卡片 ---- */
+function renderCards(d,meta){
+  const list=Array.isArray(d.news)?d.news:(Array.isArray(d)?d:[]);
+  $("#content").innerHTML=`<div class="card-list">${list.map(n=>{
+    const title=n.title||"";const detail=n.detail||n.desc||"";
+    const src=n.source||"";const link=n.link||"";
+    return `<a class="ai-card" href="${esc(link)}" target="_blank" rel="noopener">
+      <h3>${esc(title)}</h3>
+      <p>${esc(detail)}</p>
+      <div class="ai-foot">${src?`<span class="src">${esc(src)}</span>`:""}${n.date?`<span>${esc(n.date)}</span>`:""}<span class="go">查看原文 ↗</span></div>
+    </a>`;
+  }).join("")}</div>`;
+}
+
+/* ---- 通用热榜列表 ---- */
+function renderList(payload,meta){
+  let items=[],title="",subtitle="",updateTime=null;
+  if(Array.isArray(payload)){items=payload}
+  else if(payload&&typeof payload==="object"){
+    items=payload.items||payload.data||payload.news||payload.list||[];
+    title=payload.title||"";subtitle=payload.subtitle||"";
+    updateTime=payload.updateTime||payload.updated_at||payload.updated||null;
+  }
+  const norm=items.map(normItem).filter(x=>x.title);
+  if(!norm.length){$("#content").innerHTML=`<div class="empty"><div class="big">🗂</div><p>该榜单暂时没有数据</p></div>`;return}
+  $("#content").innerHTML=`<div class="news-list">${norm.map((n,i)=>{
+    const cls=i===0?"top1":i===1?"top2":i===2?"top3":"";
+    const hot=n.hot!=null?`<span class="hot">热度 ${esc(fmtHot(n.hot))}</span>`:"";
+    const author=n.author?`<span>${esc(n.author)}</span>`:"";
+    const href=n.url||"#";
+    return `<a class="news-item ${cls}" href="${esc(href)}" target="_blank" rel="noopener">
+      <span class="rank">${i+1}</span>
+      <span class="news-body">
+        <span class="news-title">${esc(n.title)}${n.url?'<span class="ext">↗</span>':""}</span>
+        <span class="news-meta">${hot}${author}</span>
+      </span></a>`;
+  }).join("")}</div>`;
+}
+
+/* ---- 历史上的今天（结构与 60s 家族一致） ---- */
+function renderHistory(d,meta){
+  let items=[];
+  if(d&&Array.isArray(d.news))items=d.news;
+  else if(d&&Array.isArray(d.list))items=d.list;
+  else if(Array.isArray(d))items=d;
+  const norm=items.map(it=>{
+    if(typeof it==="string")return{title:it,url:"",year:""};
+    return{title:it.title||it.event||"",url:it.link||"",year:it.year||it.date||""};
+  }).filter(x=>x.title);
+  if(!norm.length){$("#content").innerHTML=`<div class="empty"><div class="big">📜</div><p>暂无数据</p></div>`;return}
+  $("#content").innerHTML=`<div class="news-list">${norm.map((n,i)=>`
+    <a class="news-item" href="${esc(n.url||"#")}" target="_blank" rel="noopener">
+      <span class="rank">${esc(String(n.year||i+1))}</span>
+      <span class="news-body"><span class="news-title">${esc(n.title)}${n.url?'<span class="ext">↗</span>':""}</span></span>
+    </a>`).join("")}</div>`;
+}
+
+/* ================= 加载逻辑 ================= */
+async function loadTab(id,force=false){
+  const tab=TABS.find(t=>t.id===id);
+  if(!tab)return;
+  if(loading){pendingTab=id;return}   // 串行队列：忙则记下，当前请求完成后自动接上
+  const cached=cacheLoad(id);
+  const ttl=TTL[id]||10*60e3;
+
+  // 先渲染缓存（若有），保证秒开
+  if(cached&&(!force||true)){
+    paint(id,cached.data,{from:"cache",ts:cached.ts});
+  }else if(!cached){
+    $("#content").innerHTML=skeleton(tab.kind==="cards"?4:8);
+  }
+  if(cached&&!force&&Date.now()-cached.ts<ttl){
+    setStatus("ok",id==="digest"?"已是最新":"缓存 · "+relTime(cached.ts));
+    return;
+  }
+  loading=true;
+  $("#refreshBtn").classList.add("spin");
+  try{
+    const data=await tryChain(tab.fetchers());
+    state[id]={data,from:"live",ts:Date.now()};
+    cacheSave(id,data);
+    paint(id,data,{from:"live",ts:Date.now()});
+    setStatus("ok","实时数据 · "+fmtTime(Date.now()));
+  }catch(e){
+    if(cached){
+      paint(id,cached.data,{from:"cache",ts:cached.ts});
+      setStatus("warn","数据源异常，显示缓存");
+      showCacheNote("所有在线数据源当前不可达（"+(e&&e.message?e.message:"网络错误")+"），以下为 "+new Date(cached.ts).toLocaleString("zh-CN")+" 的缓存数据。");
+    }else{
+      $("#content").innerHTML=`<div class="empty"><div class="big">📡</div><p>数据源暂时不可达，请稍后重试<br><span style="font-size:12px">${esc(e&&e.message||"")}</span></p></div>`;
+      setStatus("err","数据源异常");
+      showCacheNote("");
+    }
+  }finally{
+    loading=false;
+    $("#refreshBtn").classList.remove("spin");
+    if(pendingTab){const p=pendingTab;pendingTab=null;if(p!==id)loadTab(p);}
+  }
+}
+
+function paint(id,data,meta){
+  const tab=TABS.find(t=>t.id===id);
+  $("#viewTitle").textContent=tab.label;
+  const extra=meta.from==="cache"?` · 缓存 ${relTime(meta.ts)}`:"";
+  let sub="";
+  if(id==="digest")sub=(data.date||"")+" · 15 条精选"+extra;
+  else if(tab.kind==="cards"){const l=Array.isArray(data.news)?data.news.length:0;sub=(data.date||"")+" · "+l+" 条"+extra}
+  else if(tab.kind==="list"&&data&&data.updateTime){sub="更新于 "+relTime(new Date(data.updateTime).getTime())+extra}
+  else sub=extra?("数据"+extra.replace(" · ","")):"";
+  $("#viewSub").textContent=sub;
+  if(id==="digest")renderDigest(data,meta);
+  else if(tab.kind==="cards")renderCards(data,meta);
+  else if(id==="history")renderHistory(data,meta);
+  else renderList(data,meta);
+  if(meta.from==="live")showCacheNote("");
+}
+
+function showCacheNote(html){
+  const el=$("#cacheNote");
+  if(html){el.innerHTML=html;el.classList.add("show")}
+  else el.classList.remove("show");
+}
+
+/* ================= 顶栏时钟 & 主题 ================= */
+function tickClock(){
+  const d=new Date();
+  const week=["日","一","二","三","四","五","六"][d.getDay()];
+  $("#dateChip").textContent=`${d.getFullYear()} 年 ${d.getMonth()+1} 月 ${d.getDate()} 日 · 星期${week}`;
+}
+function initTheme(){
+  const saved=localStorage.getItem("dailypeek:theme");
+  if(saved)document.documentElement.dataset.theme=saved;
+}
+$("#themeBtn").addEventListener("click",()=>{
+  const cur=document.documentElement.dataset.theme==="dark"?"light":"dark";
+  document.documentElement.dataset.theme=cur;
+  localStorage.setItem("dailypeek:theme",cur);
+});
+$("#refreshBtn").addEventListener("click",()=>loadTab(curTab,true));
+
+/* ================= 快捷键 & 自动刷新 ================= */
+document.addEventListener("keydown",e=>{
+  if(e.target.tagName==="INPUT"||e.target.tagName==="TEXTAREA")return;
+  if(e.key==="r"||e.key==="R"){e.preventDefault();loadTab(curTab,true);return}
+  const n=parseInt(e.key,10);
+  if(n>=0&&n<=9&&TABS[n])switchTab(TABS[n].id);
+});
+setInterval(()=>{if(!document.hidden)loadTab(curTab,true)},10*60e3);
+document.addEventListener("visibilitychange",()=>{
+  if(!document.hidden){
+    const cached=cacheLoad(curTab);
+    const ttl=TTL[curTab]||10*60e3;
+    if(!cached||Date.now()-cached.ts>ttl)loadTab(curTab);
+  }
+});
+
+/* ================= 启动 ================= */
+initTheme();
+renderTabs();
+tickClock();
+setInterval(tickClock,30000);
+loadTab("digest");
+</script>
+</body>
+</html>
